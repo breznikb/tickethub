@@ -7,3 +7,4 @@ services:
       - ./data:/app/data
     environment:
       - DATABASE_URL=sqlite+aiosqlite:////app/data/tickethub.db
+      - SYNC_ON_STARTUP=true

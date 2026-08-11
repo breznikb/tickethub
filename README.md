@@ -34,9 +34,7 @@ Build and start the API:
 docker compose up --build
 ```
 
-The container automatically applies database migrations, imports the current
-DummyJSON data, and then starts the API. The SQLite database is persisted in the
-local `data/` directory.
+The container applies database migrations and, when SYNC_ON_STARTUP=true, attempts to import DummyJSON data before starting the API. A synchronization failure does not prevent the API from starting.
 
 Open the following URLs after startup:
 
@@ -95,6 +93,7 @@ TicketHub reads the following optional environment variables:
 | --- | --- | --- |
 | `DATABASE_URL` | `sqlite+aiosqlite:///./tickethub.db` | Async SQLAlchemy database URL |
 | `DUMMYJSON_BASE_URL` | `https://dummyjson.com` | Base URL used by the import client |
+| `SYNC_ON_STARTUP` | `false` | Attempt DummyJSON synchronization when the container starts |
 
 For example:
 
