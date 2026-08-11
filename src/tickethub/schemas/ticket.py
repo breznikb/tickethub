@@ -21,6 +21,7 @@ class TicketDetail(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
 class TicketCreate(BaseModel):
     title: str
     status: str = "open"

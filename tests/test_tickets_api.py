@@ -32,7 +32,9 @@ async def test_get_nonexistent_ticket_returns_404(client):
 
 async def test_list_tickets_filters_by_status(client):
     await client.post("/tickets", json={"title": "Open one", "assignee": "bob", "status": "open"})
-    await client.post("/tickets", json={"title": "Closed one", "assignee": "bob", "status": "closed"})
+    await client.post(
+        "/tickets", json={"title": "Closed one", "assignee": "bob", "status": "closed"}
+        )
 
     response = await client.get("/tickets", params={"status": "closed"})
     assert response.status_code == 200

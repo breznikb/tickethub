@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tickethub.core.db import get_db
 from tickethub.models.ticket import Ticket
-from tickethub.schemas.ticket import TicketDetail, TicketListItem
 
 from tickethub.schemas.ticket import TicketCreate, TicketDetail, TicketListItem, TicketUpdate
 
@@ -54,6 +53,7 @@ async def get_ticket(ticket_id: int, db: AsyncSession = Depends(get_db)):
     if ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return ticket
+
 
 @router.post("", response_model=TicketDetail, status_code=201)
 async def create_ticket(payload: TicketCreate, db: AsyncSession = Depends(get_db)):
