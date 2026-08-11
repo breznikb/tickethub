@@ -51,18 +51,3 @@ class TicketUpdate(BaseModel):
             raise ValueError(f"Fields cannot be null: {fields}")
 
         return self
-
-
-async def test_patch_rejects_explicit_null(client):
-    create_response = await client.post(
-        "/tickets",
-        json={"title": "Keep valid", "assignee": "alice"},
-    )
-    ticket_id = create_response.json()["id"]
-
-    response = await client.patch(
-        f"/tickets/{ticket_id}",
-        json={"status": None},
-    )
-
-    assert response.status_code == 422
