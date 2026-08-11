@@ -94,6 +94,7 @@ TicketHub reads the following optional environment variables:
 | `DATABASE_URL` | `sqlite+aiosqlite:///./tickethub.db` | Async SQLAlchemy database URL |
 | `DUMMYJSON_BASE_URL` | `https://dummyjson.com` | Base URL used by the import client |
 | `SYNC_ON_STARTUP` | `false` | Attempt DummyJSON synchronization when the container starts |
+| `DUMMYJSON_TIMEOUT_SECONDS` | `10` | Timeout for DummyJSON HTTP operations in seconds |
 
 For example:
 

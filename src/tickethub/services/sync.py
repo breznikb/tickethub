@@ -1,4 +1,6 @@
 import asyncio
+import sys
+import httpx
 
 from tickethub.core.db import SessionLocal
 from tickethub.models.ticket import Ticket
@@ -26,6 +28,15 @@ async def sync_tickets() -> int:
     return count
 
 
-if __name__ == "__main__":
-    synced = asyncio.run(sync_tickets())
+def main() -> None:
+    try:
+        synced = asyncio.run(sync_tickets())
+    except httpx.HTTPError as exc:
+        print(f"Ticket synchronization failed: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+
     print(f"Synced {synced} tickets")
+
+
+if __name__ == "__main__":
+    main()
