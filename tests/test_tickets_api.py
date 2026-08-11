@@ -47,3 +47,29 @@ async def test_search_tickets_by_title(client):
     response = await client.get("/tickets/search", params={"q": "searchable"})
     assert response.status_code == 200
     assert any("searchable" in t["title"].lower() for t in response.json())
+
+
+async def test_create_rejects_invalid_status(client):
+    response = await client.post(
+        "/tickets",
+        json={
+            "title": "Invalid status",
+            "assignee": "alice",
+            "status": "pending",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+async def test_create_rejects_invalid_priority(client):
+    response = await client.post(
+        "/tickets",
+        json={
+            "title": "Invalid priority",
+            "assignee": "alice",
+            "priority": "urgent",
+        },
+    )
+
+    assert response.status_code == 422
