@@ -205,6 +205,13 @@ flake8 src tests
 
 The GitHub Actions workflow runs both commands for every push and pull request.
 
+## Use of AI
+
+AI was used as a teacher and guide while developing this project. It helped
+explain concepts, identify possible issues, and suggest approaches for completing
+the work. All project decisions and code changes were reviewed, chosen, and
+implemented by me.
+
 ## Project structure
 
 ```text
