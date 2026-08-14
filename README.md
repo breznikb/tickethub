@@ -205,6 +205,21 @@ flake8 src tests
 
 The GitHub Actions workflow runs both commands for every push and pull request.
 
+## Using the Makefile
+
+Shortcuts are available for common tasks:
+
+| Command | Description |
+|---|---|
+| `make install` | Install dependencies |
+| `make run` | Run the API locally |
+| `make migrate` | Apply database migrations |
+| `make sync` | Seed/refresh data from DummyJSON |
+| `make lint` | Run flake8 |
+| `make test` | Run pytest |
+| `make docker-build` | Build the Docker image |
+| `make docker-up` | Run via Docker Compose |
+
 ## Use of AI
 
 AI was used as a teacher and guide while developing this project. It helped
