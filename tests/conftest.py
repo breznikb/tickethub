@@ -16,6 +16,7 @@ def event_loop():
     yield loop
     loop.close()
 
+
 TEST_DATABASE_URL = "sqlite+aiosqlite://"
 
 test_engine = create_async_engine(
