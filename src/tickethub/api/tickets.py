@@ -7,6 +7,8 @@ from tickethub.models.ticket import Ticket
 
 from tickethub.schemas.ticket import TicketCreate, TicketDetail, TicketListItem, TicketUpdate
 
+from tickethub.core.cache import get_cached_ticket, invalidate_cached_ticket, set_cached_ticket
+
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 
@@ -49,10 +51,17 @@ async def list_tickets(
 
 @router.get("/{ticket_id}", response_model=TicketDetail)
 async def get_ticket(ticket_id: int, db: AsyncSession = Depends(get_db)):
+    cached = await get_cached_ticket(ticket_id)
+    if cached is not None:
+        return cached
+
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    return ticket
+
+    result = TicketDetail.model_validate(ticket).model_dump(mode="json")
+    await set_cached_ticket(ticket_id, result)
+    return result
 
 
 @router.post("", response_model=TicketDetail, status_code=201)
@@ -82,4 +91,5 @@ async def update_ticket(ticket_id: int, payload: TicketUpdate, db: AsyncSession 
 
     await db.commit()
     await db.refresh(ticket)
+    await invalidate_cached_ticket(ticket_id)
     return ticket

@@ -1,213 +1,100 @@
 # TicketHub
 
-TicketHub is a small asynchronous REST API for managing support tickets. It can
-also import todos and users from [DummyJSON](https://dummyjson.com/) and convert
-them into tickets.
+Middleware REST service built with FastAPI that ingests "tickets" from the DummyJSON API, stores them in a local database, and exposes read/write endpoints over that local store. Built as the entrance task for the Abysalto AI Academy (Python Developer track).
 
-The project is built with FastAPI, SQLAlchemy, Alembic, and SQLite. It includes
-Docker support, automated tests, linting, and a GitHub Actions workflow.
+## Tech stack
 
-## Features
+- Python 3.11
+- FastAPI 0.111
+- httpx 0.27
+- Pydantic 2.7
+- SQLAlchemy 2.x (async)
+- Alembic
+- pytest
+- Docker / docker-compose
+- Redis (caching)
 
-- Create, retrieve, update, list, filter, and search tickets
-- Async database access with SQLAlchemy and `aiosqlite`
-- Database migrations managed by Alembic
-- Idempotent synchronization from DummyJSON
-- Interactive OpenAPI documentation provided by FastAPI
-- Docker Compose setup for running the complete application
+## Project structure
 
-## Requirements
+```
+src/tickethub/
+├── api/        # FastAPI routers
+├── core/       # config, DB engine/session, Redis cache helpers
+├── models/     # SQLAlchemy ORM models
+├── schemas/    # Pydantic request/response models
+├── services/   # DummyJSON client, transform logic, sync job
+└── main.py     # FastAPI app entrypoint
+tests/          # pytest unit + integration tests
+alembic/        # DB migrations
+```
 
-For local development:
+## Environment setup (local, without Docker)
 
-- Python 3.11 or newer
-- `pip`
+Requires Python 3.11.
 
-Alternatively, install Docker and Docker Compose to run the containerized
-application.
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+```
 
-## Run with Docker
+## Configuration
 
-Build and start the API:
+Environment variables (all optional, sensible defaults provided):
+
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | `sqlite+aiosqlite:///./tickethub.db` | Async SQLAlchemy database URL |
+| `DUMMYJSON_BASE_URL` | `https://dummyjson.com` | Base URL for the external DummyJSON source |
+| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL, used for caching ticket detail lookups |
+
+## Running locally
+
+Apply database migrations:
+
+```bash
+alembic upgrade head
+```
+
+Seed the database from DummyJSON:
+
+```bash
+PYTHONPATH=src python3.11 -m tickethub.services.sync
+```
+
+Start the API:
+
+```bash
+uvicorn tickethub.main:app --reload --app-dir src
+```
+
+Then open http://127.0.0.1:8000/docs for interactive API docs.
+
+Note: `GET /tickets/{id}` uses Redis for caching. Running locally without Docker requires a Redis instance reachable at `REDIS_URL` (e.g. `docker run -p 6379:6379 redis:7-alpine`), otherwise that endpoint will fail to connect to Redis.
+
+## Running with Docker
 
 ```bash
 docker compose up --build
 ```
 
-The container applies database migrations and, when SYNC_ON_STARTUP=true, attempts to import DummyJSON data before starting the API. A synchronization failure does not prevent the API from starting.
+Builds the image, starts a Redis container alongside the API, runs migrations, seeds the database, and starts the API on http://localhost:8000. The SQLite database persists in the `./data` directory via a mounted volume.
 
-Open the following URLs after startup:
-
-- API: <http://localhost:8000>
-- Swagger UI: <http://localhost:8000/docs>
-- ReDoc: <http://localhost:8000/redoc>
-
-Stop the application with:
-
-```bash
-docker compose down
-```
-
-## Run locally
-
-Create and activate a virtual environment:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
-
-Install the dependencies:
-
-```bash
-pip install -r requirements.txt -r requirements-dev.txt
-```
-
-Make the source package importable and apply the database migration:
-
-```bash
-export PYTHONPATH=src
-alembic upgrade head
-```
-
-Import tickets from DummyJSON if you want to seed the database:
-
-```bash
-python -m tickethub.services.sync
-```
-
-Start the development server:
-
-```bash
-uvicorn tickethub.main:app --reload
-```
-
-The local setup stores data in `tickethub.db` in the project directory by
-default.
-
-## Configuration
-
-TicketHub reads the following optional environment variables:
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `DATABASE_URL` | `sqlite+aiosqlite:///./tickethub.db` | Async SQLAlchemy database URL |
-| `DUMMYJSON_BASE_URL` | `https://dummyjson.com` | Base URL used by the import client |
-| `SYNC_ON_STARTUP` | `false` | Attempt DummyJSON synchronization when the container starts |
-| `DUMMYJSON_TIMEOUT_SECONDS` | `10` | Timeout for DummyJSON HTTP operations in seconds |
-
-For example:
-
-```bash
-export DATABASE_URL="sqlite+aiosqlite:///./local.db"
-export DUMMYJSON_BASE_URL="https://dummyjson.com"
-```
-
-## API
-
-### Health check
-
-```http
-GET /
-```
-
-Returns `{"status": "ok"}` when the application is running.
-
-### List tickets
-
-```http
-GET /tickets?skip=0&limit=20&status=open&priority=high
-```
-
-All query parameters are optional. `limit` has a maximum value of 100.
-
-### Search tickets
-
-```http
-GET /tickets/search?q=meeting
-```
-
-Search is case-insensitive and matches text contained in the ticket title.
-
-### Get a ticket
-
-```http
-GET /tickets/{ticket_id}
-```
-
-Returns `404` when the ticket does not exist.
-
-### Create a ticket
-
-```http
-POST /tickets
-Content-Type: application/json
-
-{
-  "title": "Investigate checkout failure",
-  "assignee": "alice",
-  "status": "open",
-  "priority": "high"
-}
-```
-
-Only `title` and `assignee` are required. `status` defaults to `open`, and
-`priority` defaults to `medium`.
-
-### Update a ticket
-
-```http
-PATCH /tickets/{ticket_id}
-Content-Type: application/json
-
-{
-  "status": "closed",
-  "priority": "low",
-  "assignee": "bob"
-}
-```
-
-All update fields are optional, and omitted fields remain unchanged.
-
-## DummyJSON synchronization
-
-The synchronization command downloads all todos and users, transforms each todo
-into a ticket, and inserts or updates it by ID:
-
-```bash
-python -m tickethub.services.sync
-```
-
-The transformation uses these rules:
-
-- A completed todo becomes a `closed` ticket; otherwise it becomes `open`.
-- The assignee is resolved from the todo's user ID, or set to `unknown` when the
-  user cannot be found.
-- Priority cycles through `low`, `medium`, and `high` based on the todo ID.
-- The original todo object is retained in the ticket's `source_data` field.
-
-Because existing rows are updated, the synchronization can safely be run more
-than once.
-
-## Development
-
-Run the test suite:
+## Running tests
 
 ```bash
 pytest -v
 ```
 
-Run the linter:
+Tests use a separate SQLite database (`test_tickethub.db`) and never touch the real `tickethub.db`.
+
+## Linting
 
 ```bash
 flake8 src tests
 ```
 
-The GitHub Actions workflow runs both commands for every push and pull request.
-
 ## Using the Makefile
-
-Shortcuts are available for common tasks:
 
 | Command | Description |
 |---|---|
@@ -220,27 +107,24 @@ Shortcuts are available for common tasks:
 | `make docker-build` | Build the Docker image |
 | `make docker-up` | Run via Docker Compose |
 
-## Use of AI
+## API overview
 
-AI was used as a teacher and guide while developing this project. It helped
-explain concepts, identify possible issues, and suggest approaches for completing
-the work. All project decisions and code changes were reviewed, chosen, and
-implemented by me.
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/tickets` | Paginated list, filterable by `status` and `priority` |
+| GET | `/tickets/{id}` | Ticket detail, including full original source JSON (cached in Redis for 30s) |
+| GET | `/tickets/search?q=` | Search tickets by title |
+| POST | `/tickets` | Create a new ticket |
+| PATCH | `/tickets/{id}` | Update a ticket's status/priority/assignee (invalidates its cache entry) |
 
-## Project structure
+## Design notes
 
-```text
-.
-├── alembic/                    # Migration environment and revisions
-├── src/tickethub/
-│   ├── api/                    # FastAPI routes
-│   ├── core/                   # Configuration and database setup
-│   ├── models/                 # SQLAlchemy models
-│   ├── schemas/                # Pydantic API schemas
-│   ├── services/               # Import client, transformation, and sync
-│   └── main.py                 # FastAPI application entry point
-├── tests/                      # Unit and API tests
-├── Dockerfile
-├── docker-compose.yml
-└── requirements.txt
-```
+- All read/write endpoints operate against the local database only — DummyJSON is called exclusively during the sync step (startup script / Docker entrypoint), never per-request.
+- `priority` is derived from `id % 3` (0=low, 1=medium, 2=high) since DummyJSON's todos have no native priority field.
+- The list endpoint's `description` field is the ticket's `title` truncated to 100 characters, since DummyJSON's todos have no separate description field.
+- The sync is idempotent (upsert by id), so it's safe to re-run.
+- `GET /tickets/{id}` caches its response in Redis for 30 seconds; `PATCH /tickets/{id}` explicitly invalidates that cache entry so updates are reflected immediately instead of waiting for the TTL to expire.
+
+## AI usage disclosure
+
+This project was built interactively with Claude and Codex, used as a step-by-step technical assistant/tutor rather than an autonomous code generator — the author wrote/typed every file, ran every command, and debugged real errors (WSL setup, Docker CLI permissions, line-ending issues in `entrypoint.sh`, flake8 style violations) as they occurred, with Claude providing explanations and next-step guidance at each stage.
