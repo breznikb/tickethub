@@ -6,6 +6,16 @@ from sqlalchemy.pool import StaticPool
 from tickethub.core.db import Base, get_db
 from tickethub.main import app
 
+import asyncio
+import pytest
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
 TEST_DATABASE_URL = "sqlite+aiosqlite://"
 
 test_engine = create_async_engine(
