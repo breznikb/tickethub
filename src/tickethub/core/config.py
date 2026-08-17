@@ -8,3 +8,5 @@ DUMMYJSON_TIMEOUT_SECONDS = float(
 )
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")

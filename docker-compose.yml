@@ -8,8 +8,10 @@ services:
     environment:
       - DATABASE_URL=sqlite+aiosqlite:////app/data/tickethub.db
       - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
     depends_on:
       - redis
+      - qdrant
 
   redis:
     image: redis:7-alpine

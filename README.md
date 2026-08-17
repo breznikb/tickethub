@@ -47,6 +47,7 @@ Environment variables (all optional, sensible defaults provided):
 | `DATABASE_URL` | `sqlite+aiosqlite:///./tickethub.db` | Async SQLAlchemy database URL |
 | `DUMMYJSON_BASE_URL` | `https://dummyjson.com` | Base URL for the external DummyJSON source |
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL, used for caching ticket detail lookups |
+| `QDRANT_URL` | `http://localhost:6333` | Qdrant HTTP endpoint used for vector storage |
 
 ## Running locally
 
