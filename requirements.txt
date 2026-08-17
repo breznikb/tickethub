@@ -6,4 +6,4 @@ sqlalchemy==2.0.30
 alembic==1.13.1
 aiosqlite==0.20.0
 redis==5.0.4
-qdrant-client==1.18.0
+qdrant-client[fastembed]==1.18.0
