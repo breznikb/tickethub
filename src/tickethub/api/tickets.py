@@ -43,6 +43,7 @@ async def search_tickets(q: str, db: AsyncSession = Depends(get_db)):
     tickets = result.scalars().all()
     return [_to_list_item(t) for t in tickets]
 
+
 @router.get(
     "/semantic-search",
     response_model=list[TicketSemanticSearchResult],

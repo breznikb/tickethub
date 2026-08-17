@@ -89,7 +89,6 @@ async def index_tickets() -> int:
     return len(points)
 
 
-
 async def run_indexing() -> int:
     try:
         return await index_tickets()

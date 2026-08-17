@@ -8,6 +8,7 @@ from tickethub.services.ollama_client import generate_answer
 from tickethub.services.vector_store import search_ticket_vectors
 from tickethub.core.config import RAG_MIN_RELEVANCE_SCORE
 
+
 @dataclass(frozen=True)
 class RagSource:
     id: int
