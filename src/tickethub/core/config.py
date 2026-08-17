@@ -24,3 +24,21 @@ QDRANT_COLLECTION_NAME = os.getenv(
 )
 
 EMBEDDING_VECTOR_SIZE = 384
+
+OLLAMA_URL = os.getenv(
+    "OLLAMA_URL",
+    "http://localhost:11434",
+)
+
+OLLAMA_MODEL = os.getenv(
+    "OLLAMA_MODEL",
+    "gemma3:1b",
+)
+
+OLLAMA_TIMEOUT_SECONDS = float(
+    os.getenv("OLLAMA_TIMEOUT_SECONDS", "60"),
+)
+
+RAG_MIN_RELEVANCE_SCORE = float(
+    os.getenv("RAG_MIN_RELEVANCE_SCORE", "0.70")
+)

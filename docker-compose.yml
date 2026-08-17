@@ -11,9 +11,13 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - QDRANT_URL=http://qdrant:6333
       - EMBEDDING_CACHE_DIR=/app/model_cache
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=gemma3:1b
+      - OLLAMA_TIMEOUT=30
     depends_on:
       - redis
       - qdrant
+      - ollama
 
   redis:
     image: redis:7-alpine
@@ -27,6 +31,14 @@ services:
     volumes:
       - qdrant_storage:/qdrant/storage
 
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
 volumes:
   qdrant_storage:
   embedding_cache:
+  ollama_data:

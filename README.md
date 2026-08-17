@@ -1,6 +1,6 @@
 # TicketHub
 
-Middleware REST service built with FastAPI that ingests "tickets" from the DummyJSON API, stores them in a local database, and exposes read/write endpoints over that local store. Built as the entrance task for the Abysalto AI Academy (Python Developer track).
+Middleware REST service built with FastAPI that ingests "tickets" from the DummyJSON API, stores them locally, and exposes read/write, semantic search, and AI question-answering endpoints. Built as the entrance task for the Abysalto AI Academy (Python Developer track).
 
 ## Tech stack
 
@@ -13,6 +13,9 @@ Middleware REST service built with FastAPI that ingests "tickets" from the Dummy
 - pytest
 - Docker / docker-compose
 - Redis (caching)
+- Qdrant (vector storage)
+- FastEmbed (local embeddings)
+- Ollama with Gemma 3 (local question answering)
 
 ## Project structure
 
@@ -51,7 +54,10 @@ Environment variables (all optional, sensible defaults provided):
 | `EMBEDDING_MODEL` | `BAAI/bge-small-en-v1.5` | Local model used to create ticket and query embeddings |
 | `EMBEDDING_CACHE_DIR` | FastEmbed default | Directory used to cache embedding model files |
 | `QDRANT_COLLECTION_NAME` | `tickets` | Qdrant collection containing ticket vectors |
-| GET | `/tickets/semantic-search?q=` | Find tickets by semantic similarity, with optional status and priority filters |
+| `OLLAMA_URL` | `http://localhost:11434` | Ollama HTTP endpoint |
+| `OLLAMA_MODEL` | `gemma3:1b` | Local language model used for answers |
+| `OLLAMA_TIMEOUT_SECONDS` | `60` | Maximum wait for local model responses |
+| `RAG_MIN_RELEVANCE_SCORE` | `0.70` | Minimum vector score accepted as RAG context |
 
 ## Running locally
 
@@ -79,11 +85,20 @@ Note: `GET /tickets/{id}` uses Redis for caching. Running locally without Docker
 
 ## Running with Docker
 
+Start Ollama and download the local language model once:
+
+```bash
+docker compose up -d ollama
+docker compose exec ollama ollama pull gemma3:1b
+```
+
+Start the complete application:
+
 ```bash
 docker compose up --build
 ```
 
-Builds the image, starts a Redis container alongside the API, runs migrations, seeds the database, and starts the API on http://localhost:8000. The SQLite database persists in the `./data` directory via a mounted volume.
+This builds the image, starts Redis, Qdrant, Ollama, and the API, applies migrations, and serves the API on http://localhost:8000. The SQLite database persists in the `./data` directory, while named Docker volumes preserve vectors, embedding models, and the Ollama model.
 
 Index stored tickets in Qdrant:
 
@@ -126,8 +141,10 @@ flake8 src tests
 | GET | `/tickets` | Paginated list, filterable by `status` and `priority` |
 | GET | `/tickets/{id}` | Ticket detail, including full original source JSON (cached in Redis for 30s) |
 | GET | `/tickets/search?q=` | Search tickets by title |
+| GET | `/tickets/semantic-search?q=` | Find tickets by semantic similarity, with optional status and priority filters |
 | POST | `/tickets` | Create a new ticket |
 | PATCH | `/tickets/{id}` | Update a ticket's status/priority/assignee (invalidates its cache entry) |
+| POST | `/ai/ask` | Answer questions using relevant tickets and return supporting sources |
 
 ## Design notes
 
@@ -137,6 +154,8 @@ flake8 src tests
 - The sync is idempotent (upsert by id), so it's safe to re-run.
 - `GET /tickets/{id}` caches its response in Redis for 30 seconds; `PATCH /tickets/{id}` explicitly invalidates that cache entry so updates are reflected immediately instead of waiting for the TTL to expire.
 - Ticket creation and updates refresh their Qdrant vectors through an in-process background task. The full indexing command can repair the vector index if Qdrant was unavailable during a write.
+- The AI endpoint retrieves relevant tickets from Qdrant, reloads their authoritative data from SQLite, and gives only that context to the local Gemma model.
+- Matches below `RAG_MIN_RELEVANCE_SCORE` are rejected so unrelated tickets do not trigger an AI-generated answer.
 
 ## AI usage disclosure
 
