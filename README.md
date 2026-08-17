@@ -51,6 +51,7 @@ Environment variables (all optional, sensible defaults provided):
 | `EMBEDDING_MODEL` | `BAAI/bge-small-en-v1.5` | Local model used to create ticket and query embeddings |
 | `EMBEDDING_CACHE_DIR` | FastEmbed default | Directory used to cache embedding model files |
 | `QDRANT_COLLECTION_NAME` | `tickets` | Qdrant collection containing ticket vectors |
+| GET | `/tickets/semantic-search?q=` | Find tickets by semantic similarity, with optional status and priority filters |
 
 ## Running locally
 

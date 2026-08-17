@@ -15,6 +15,10 @@ class TicketListItem(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class TicketSemanticSearchResult(TicketListItem):
+    score: float
+
+
 class TicketDetail(BaseModel):
     id: int
     title: str

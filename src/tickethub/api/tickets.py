@@ -5,7 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tickethub.core.db import get_db
 from tickethub.models.ticket import Ticket
 
-from tickethub.schemas.ticket import TicketCreate, TicketDetail, TicketListItem, TicketUpdate
+from tickethub.schemas.ticket import (
+    TicketCreate,
+    TicketDetail,
+    TicketListItem,
+    TicketPriority,
+    TicketSemanticSearchResult,
+    TicketStatus,
+    TicketUpdate,
+)
+from tickethub.services.vector_store import search_ticket_vectors
 
 from tickethub.core.cache import get_cached_ticket, invalidate_cached_ticket, set_cached_ticket
 
@@ -27,6 +36,46 @@ async def search_tickets(q: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Ticket).where(Ticket.title.ilike(f"%{q}%")))
     tickets = result.scalars().all()
     return [_to_list_item(t) for t in tickets]
+
+@router.get(
+    "/semantic-search",
+    response_model=list[TicketSemanticSearchResult],
+)
+async def semantic_search_tickets(
+    q: str = Query(min_length=1),
+    limit: int = Query(10, ge=1, le=50),
+    status: TicketStatus | None = None,
+    priority: TicketPriority | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    matches = await search_ticket_vectors(
+        query=q,
+        limit=limit,
+        status=status,
+        priority=priority,
+    )
+
+    if not matches:
+        return []
+
+    ticket_ids = [match.ticket_id for match in matches]
+
+    result = await db.execute(
+        select(Ticket).where(Ticket.id.in_(ticket_ids))
+    )
+    tickets_by_id = {
+        ticket.id: ticket
+        for ticket in result.scalars().all()
+    }
+
+    return [
+        TicketSemanticSearchResult(
+            **_to_list_item(tickets_by_id[match.ticket_id]).model_dump(),
+            score=match.score,
+        )
+        for match in matches
+        if match.ticket_id in tickets_by_id
+    ]
 
 
 @router.get("", response_model=list[TicketListItem])

@@ -1,3 +1,71 @@
+from tickethub.services.vector_store import TicketMatch
+
+async def test_semantic_search_returns_sqlite_ticket(
+    client,
+    monkeypatch,
+):
+    create_response = await client.post(
+        "/tickets",
+        json={
+            "title": "User cannot access account",
+            "assignee": "alice",
+        },
+    )
+    ticket_id = create_response.json()["id"]
+
+    async def fake_vector_search(
+        query,
+        limit,
+        status,
+        priority,
+    ):
+        assert query == "login problem"
+        assert limit == 3
+        assert status == "open"
+        assert priority is None
+
+        return [
+            TicketMatch(
+                ticket_id=ticket_id,
+                score=0.91,
+            )
+        ]
+
+    monkeypatch.setattr(
+        "tickethub.api.tickets.search_ticket_vectors",
+        fake_vector_search,
+    )
+
+    response = await client.get(
+        "/tickets/semantic-search",
+        params={
+            "q": "login problem",
+            "limit": 3,
+            "status": "open",
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["id"] == ticket_id
+    assert body[0]["title"] == "User cannot access account"
+    assert body[0]["score"] == 0.91
+
+
+async def test_semantic_search_rejects_invalid_status(client):
+    response = await client.get(
+        "/tickets/semantic-search",
+        params={
+            "q": "login problem",
+            "status": "pending",
+        },
+    )
+
+    assert response.status_code == 422
+
+
 async def test_create_and_get_ticket(client):
     response = await client.post(
         "/tickets", json={"title": "New ticket", "assignee": "benjamin"}
