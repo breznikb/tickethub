@@ -1,5 +1,6 @@
 from tickethub.services.vector_store import TicketMatch
 
+
 async def test_semantic_search_returns_sqlite_ticket(
     client,
     monkeypatch,
