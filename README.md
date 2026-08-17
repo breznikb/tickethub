@@ -84,6 +84,13 @@ docker compose up --build
 
 Builds the image, starts a Redis container alongside the API, runs migrations, seeds the database, and starts the API on http://localhost:8000. The SQLite database persists in the `./data` directory via a mounted volume.
 
+Index stored tickets in Qdrant:
+
+```bash
+docker compose run --rm --entrypoint python api \
+  -m tickethub.services.index_tickets
+```
+
 ## Running tests
 
 ```bash
