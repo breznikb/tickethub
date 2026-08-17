@@ -136,7 +136,8 @@ flake8 src tests
 - The list endpoint's `description` field is the ticket's `title` truncated to 100 characters, since DummyJSON's todos have no separate description field.
 - The sync is idempotent (upsert by id), so it's safe to re-run.
 - `GET /tickets/{id}` caches its response in Redis for 30 seconds; `PATCH /tickets/{id}` explicitly invalidates that cache entry so updates are reflected immediately instead of waiting for the TTL to expire.
+- Ticket creation and updates refresh their Qdrant vectors through an in-process background task. The full indexing command can repair the vector index if Qdrant was unavailable during a write.
 
 ## AI usage disclosure
 
-This project was built interactively with Claude and Codex, used as a step-by-step technical assistant/tutor rather than an autonomous code generator — the author wrote/typed every file, ran every command, and debugged real errors (WSL setup, Docker CLI permissions, line-ending issues in `entrypoint.sh`, flake8 style violations) as they occurred, with Claude providing explanations and next-step guidance at each stage.
+This project was built interactively with Claude and Codex, used as a step-by-step technical assistant/tutor rather than an autonomous code generator — the author wrote/typed every file, ran every command, and debugged real errors (WSL setup, Docker CLI permissions, line-ending issues in `entrypoint.sh`, flake8 style violations) as they occurred, with Claude providing explanations and guidance at each stage.

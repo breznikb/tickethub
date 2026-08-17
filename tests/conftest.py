@@ -16,6 +16,15 @@ def event_loop():
     yield loop
     loop.close()
 
+@pytest.fixture(autouse=True)
+def disable_vector_indexing(monkeypatch):
+    async def do_nothing(_ticket):
+        return None
+
+    monkeypatch.setattr(
+        "tickethub.api.tickets.index_ticket_safely",
+        do_nothing,
+    )
 
 TEST_DATABASE_URL = "sqlite+aiosqlite://"
 

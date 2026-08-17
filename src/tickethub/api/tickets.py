@@ -1,10 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tickethub.core.db import get_db
 from tickethub.models.ticket import Ticket
-
+from tickethub.services.vector_sync import index_ticket_safely
 from tickethub.schemas.ticket import (
     TicketCreate,
     TicketDetail,
@@ -114,7 +120,11 @@ async def get_ticket(ticket_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("", response_model=TicketDetail, status_code=201)
-async def create_ticket(payload: TicketCreate, db: AsyncSession = Depends(get_db)):
+async def create_ticket(
+    payload: TicketCreate,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
     ticket = Ticket(
         title=payload.title,
         status=payload.status,
@@ -125,11 +135,22 @@ async def create_ticket(payload: TicketCreate, db: AsyncSession = Depends(get_db
     db.add(ticket)
     await db.commit()
     await db.refresh(ticket)
+
+    background_tasks.add_task(
+        index_ticket_safely,
+        ticket,
+    )
+
     return ticket
 
 
 @router.patch("/{ticket_id}", response_model=TicketDetail)
-async def update_ticket(ticket_id: int, payload: TicketUpdate, db: AsyncSession = Depends(get_db)):
+async def update_ticket(
+    ticket_id: int,
+    payload: TicketUpdate,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -141,4 +162,10 @@ async def update_ticket(ticket_id: int, payload: TicketUpdate, db: AsyncSession 
     await db.commit()
     await db.refresh(ticket)
     await invalidate_cached_ticket(ticket_id)
+
+    background_tasks.add_task(
+        index_ticket_safely,
+        ticket,
+    )
+
     return ticket

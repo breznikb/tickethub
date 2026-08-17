@@ -54,6 +54,62 @@ async def test_semantic_search_returns_sqlite_ticket(
     assert body[0]["score"] == 0.91
 
 
+async def test_ticket_writes_schedule_vector_indexing(
+    client,
+    monkeypatch,
+):
+    indexed_tickets = []
+
+    async def record_indexed_ticket(ticket):
+        indexed_tickets.append(
+            {
+                "id": ticket.id,
+                "status": ticket.status,
+                "assignee": ticket.assignee,
+            }
+        )
+
+    monkeypatch.setattr(
+        "tickethub.api.tickets.index_ticket_safely",
+        record_indexed_ticket,
+    )
+
+    create_response = await client.post(
+        "/tickets",
+        json={
+            "title": "Index this ticket",
+            "assignee": "alice",
+        },
+    )
+
+    assert create_response.status_code == 201
+    ticket_id = create_response.json()["id"]
+
+    assert indexed_tickets == [
+        {
+            "id": ticket_id,
+            "status": "open",
+            "assignee": "alice",
+        }
+    ]
+
+    indexed_tickets.clear()
+
+    patch_response = await client.patch(
+        f"/tickets/{ticket_id}",
+        json={"status": "closed"},
+    )
+
+    assert patch_response.status_code == 200
+    assert indexed_tickets == [
+        {
+            "id": ticket_id,
+            "status": "closed",
+            "assignee": "alice",
+        }
+    ]
+
+
 async def test_semantic_search_rejects_invalid_status(client):
     response = await client.get(
         "/tickets/semantic-search",

@@ -20,6 +20,40 @@ def ticket_to_text(ticket: Ticket) -> str:
     )
 
 
+def ticket_to_payload(ticket: Ticket) -> dict:
+    return {
+        "ticket_id": ticket.id,
+        "title": ticket.title,
+        "status": ticket.status,
+        "priority": ticket.priority,
+        "assignee": ticket.assignee,
+    }
+
+
+async def index_ticket(ticket: Ticket) -> None:
+    await ensure_ticket_collection()
+
+    text = ticket_to_text(ticket)
+    payload = ticket_to_payload(ticket)
+
+    vectors = await asyncio.to_thread(
+        embed_documents,
+        [text],
+    )
+
+    point = models.PointStruct(
+        id=ticket.id,
+        vector=vectors[0],
+        payload=payload,
+    )
+
+    await qdrant_client.upsert(
+        collection_name=QDRANT_COLLECTION_NAME,
+        points=[point],
+        wait=True,
+    )
+
+
 async def index_tickets() -> int:
     await ensure_ticket_collection()
 
@@ -31,19 +65,17 @@ async def index_tickets() -> int:
         return 0
 
     texts = [ticket_to_text(ticket) for ticket in tickets]
-    vectors = embed_documents(texts)
+
+    vectors = await asyncio.to_thread(
+        embed_documents,
+        texts,
+    )
 
     points = [
         models.PointStruct(
             id=ticket.id,
             vector=vector,
-            payload={
-                "ticket_id": ticket.id,
-                "title": ticket.title,
-                "status": ticket.status,
-                "priority": ticket.priority,
-                "assignee": ticket.assignee,
-            },
+            payload=ticket_to_payload(ticket),
         )
         for ticket, vector in zip(tickets, vectors)
     ]
@@ -55,6 +87,7 @@ async def index_tickets() -> int:
     )
 
     return len(points)
+
 
 
 async def run_indexing() -> int:
