@@ -13,7 +13,7 @@ services:
       - EMBEDDING_CACHE_DIR=/app/model_cache
       - OLLAMA_URL=http://ollama:11434
       - OLLAMA_MODEL=gemma3:1b
-      - OLLAMA_TIMEOUT=30
+      - OLLAMA_TIMEOUT_SECONDS=60
     depends_on:
       - redis
       - qdrant
