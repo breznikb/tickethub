@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tickethub.core.db import get_db
+from tickethub.core.security import get_current_user
 from tickethub.schemas.ai import (
     AnswerSource,
     AskTicketsRequest,
@@ -11,7 +12,11 @@ from tickethub.schemas.ai import (
 from tickethub.services.rag import answer_ticket_question
 
 
-router = APIRouter(prefix="/ai", tags=["ai"])
+router = APIRouter(
+    prefix="/ai",
+    tags=["ai"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 @router.post(

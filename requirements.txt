@@ -7,3 +7,6 @@ alembic==1.13.1
 aiosqlite==0.20.0
 redis==5.0.4
 qdrant-client[fastembed]==1.18.0
+PyJWT
+pwdlib[argon2]
+python-multipart

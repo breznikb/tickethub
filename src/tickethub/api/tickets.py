@@ -21,10 +21,15 @@ from tickethub.schemas.ticket import (
     TicketUpdate,
 )
 from tickethub.services.vector_store import search_ticket_vectors
-
+from tickethub.core.security import get_current_user
 from tickethub.core.cache import get_cached_ticket, invalidate_cached_ticket, set_cached_ticket
 
-router = APIRouter(prefix="/tickets", tags=["tickets"])
+
+router = APIRouter(
+    prefix="/tickets",
+    tags=["tickets"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 def _to_list_item(ticket: Ticket) -> TicketListItem:

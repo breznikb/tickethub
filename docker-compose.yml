@@ -14,6 +14,7 @@ services:
       - OLLAMA_URL=http://ollama:11434
       - OLLAMA_MODEL=gemma3:1b
       - OLLAMA_TIMEOUT_SECONDS=60
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
     depends_on:
       - redis
       - qdrant
