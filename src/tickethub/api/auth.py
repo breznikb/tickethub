@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
@@ -15,7 +17,7 @@ from tickethub.schemas.auth import Token, UserCreate, UserPublic
 from tickethub.core.config import RATE_LIMIT_LOGIN
 from tickethub.core.rate_limit import limiter
 
-
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
@@ -55,6 +57,10 @@ async def register(
         )
 
     await db.refresh(user)
+    logger.info(
+        "User registered: user_id=%s",
+        user.id,
+    )
     return user
 
 
@@ -71,15 +77,30 @@ async def login(
         select(User).where(User.username == normalized_username)
     )
 
+    client_ip = (
+        request.client.host
+        if request.client is not None
+        else "unknown"
+    )
+
     if user is None or not verify_password(
         form.password,
         user.hashed_password,
     ):
+        logger.warning(
+            "Authentication failed: client_ip=%s",
+            client_ip,
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    logger.info(
+        "User authenticated: user_id=%s client_ip=%s",
+        user.id,
+        client_ip,
+    )
 
     return Token(
         access_token=create_access_token(user.id),

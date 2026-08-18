@@ -19,6 +19,7 @@ Middleware REST service built with FastAPI that ingests "tickets" from the Dummy
 - FastEmbed (local embeddings)
 - Ollama with Gemma 3 (local question answering)
 - SlowAPI (per-IP rate limiting)
+- Python standard-library application logging
 
 ## Project structure
 
@@ -67,6 +68,7 @@ Most environment variables have local defaults. `JWT_SECRET_KEY` is required.
 | `RATE_LIMIT_DEFAULT` | `60/minute` | Default per-IP limit for API endpoints |
 | `RATE_LIMIT_LOGIN` | `5/minute` | Per-IP limit for login attempts |
 | `RATE_LIMIT_ENABLED` | `true` | Enables or disables rate limiting |
+| `LOG_LEVEL` | `INFO` | Application log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`) |
 
 Generate a secret for local development:
 
@@ -118,7 +120,7 @@ uvicorn tickethub.main:app --reload --app-dir src
 
 Then open http://127.0.0.1:8000/docs for interactive API docs.
 
-Note: `GET /tickets/{id}` uses Redis for caching. Running locally without Docker requires a Redis instance reachable at `REDIS_URL` (e.g. `docker run -p 6379:6379 redis:7-alpine`), otherwise that endpoint will fail to connect to Redis.
+Note: `GET /tickets/{id}` uses Redis for caching. If Redis is unavailable, TicketHub logs a warning and falls back to SQLite, so ticket requests can continue without the cache.
 
 ## Running with Docker
 
@@ -229,6 +231,8 @@ flake8 src tests
 - The AI endpoint retrieves relevant tickets from Qdrant, reloads their authoritative data from SQLite, and gives only that context to the local Gemma model.
 - Matches below `RAG_MIN_RELEVANCE_SCORE` are rejected so unrelated tickets do not trigger an AI-generated answer.
 - SlowAPI applies an in-memory per-IP limit of 60 requests per minute by default, while `/auth/token` is restricted to 5 login attempts per minute. Exceeded limits return HTTP 429.
+- Application events are logged to standard output using configurable log levels. Ticket writes and synchronization lifecycle events use INFO, recoverable cache failures use WARNING, and failed synchronization or vector indexing uses ERROR.
+- Redis is treated as an optional cache: read failures become cache misses, while failed writes or invalidations are logged without failing the ticket request.
 
 ## AI usage disclosure
 

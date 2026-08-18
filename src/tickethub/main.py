@@ -1,3 +1,5 @@
+import logging
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,12 +13,22 @@ from tickethub.core.vector_db import qdrant_client
 from tickethub.api.auth import router as auth_router
 from tickethub.api.stats import router as stats_router
 from tickethub.core.rate_limit import limiter
+from tickethub.core.logging_config import configure_logging
+
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    yield
-    await qdrant_client.close()
+    logger.info("TicketHub application started")
+
+    try:
+        yield
+    finally:
+        await qdrant_client.close()
+        logger.info("TicketHub application stopped")
 
 
 app = FastAPI(title="TicketHub", lifespan=lifespan)

@@ -1,7 +1,6 @@
 import asyncio
-import sys
 
-import httpx
+import logging
 
 from tickethub.core.db import SessionLocal
 from tickethub.core.vector_db import qdrant_client
@@ -12,6 +11,10 @@ from tickethub.services.dummyjson_client import (
 )
 from tickethub.services.index_tickets import index_tickets
 from tickethub.services.transform import transform_todo_to_ticket
+from tickethub.core.logging_config import configure_logging
+
+
+logger = logging.getLogger(__name__)
 
 
 async def sync_tickets() -> int:
@@ -46,26 +49,36 @@ async def sync_tickets() -> int:
 
 
 async def sync_and_index() -> tuple[int, int]:
+    logger.info("Ticket synchronization started")
+
     try:
         synced = await sync_tickets()
         indexed = await index_tickets()
+
+        logger.info(
+            "Ticket synchronization completed: "
+            "synced=%s indexed=%s",
+            synced,
+            indexed,
+        )
+
         return synced, indexed
+    except Exception:
+        logger.exception(
+            "Ticket synchronization failed"
+        )
+        raise
     finally:
         await qdrant_client.close()
 
 
 def main() -> None:
-    try:
-        synced, indexed = asyncio.run(sync_and_index())
-    except httpx.HTTPError as exc:
-        print(
-            f"Ticket synchronization failed: {exc}",
-            file=sys.stderr,
-        )
-        raise SystemExit(1) from exc
+    configure_logging()
 
-    print(f"Synced {synced} tickets")
-    print(f"Indexed {indexed} tickets")
+    try:
+        asyncio.run(sync_and_index())
+    except Exception as exc:
+        raise SystemExit(1) from exc
 
 
 if __name__ == "__main__":

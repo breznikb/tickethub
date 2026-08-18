@@ -18,6 +18,7 @@ services:
       - RATE_LIMIT_DEFAULT=${RATE_LIMIT_DEFAULT:-60/minute}
       - RATE_LIMIT_LOGIN=${RATE_LIMIT_LOGIN:-5/minute}
       - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     depends_on:
       - redis
       - qdrant

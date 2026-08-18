@@ -61,3 +61,8 @@ RATE_LIMIT_ENABLED = os.getenv(
     "RATE_LIMIT_ENABLED",
     "true",
 ).lower() in {"1", "true", "yes"}
+
+LOG_LEVEL = os.getenv(
+    "LOG_LEVEL",
+    "INFO",
+).upper()

@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -24,6 +26,8 @@ from tickethub.services.vector_store import search_ticket_vectors
 from tickethub.core.security import get_current_user
 from tickethub.core.cache import get_cached_ticket, invalidate_cached_ticket, set_cached_ticket
 
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/tickets",
@@ -142,6 +146,11 @@ async def create_ticket(
     await db.commit()
     await db.refresh(ticket)
 
+    logger.info(
+        "Ticket created: ticket_id=%s",
+        ticket.id,
+    )
+
     background_tasks.add_task(
         index_ticket_safely,
         ticket,
@@ -168,6 +177,12 @@ async def update_ticket(
     await db.commit()
     await db.refresh(ticket)
     await invalidate_cached_ticket(ticket_id)
+
+    logger.info(
+        "Ticket updated: ticket_id=%s fields=%s",
+        ticket.id,
+        ",".join(sorted(updates)),
+    )
 
     background_tasks.add_task(
         index_ticket_safely,
