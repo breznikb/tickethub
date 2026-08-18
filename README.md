@@ -18,6 +18,7 @@ Middleware REST service built with FastAPI that ingests "tickets" from the Dummy
 - Qdrant (vector storage)
 - FastEmbed (local embeddings)
 - Ollama with Gemma 3 (local question answering)
+- SlowAPI (per-IP rate limiting)
 
 ## Project structure
 
@@ -63,6 +64,9 @@ Most environment variables have local defaults. `JWT_SECRET_KEY` is required.
 | `JWT_SECRET_KEY` | Required | Secret used to sign and verify JWT access tokens |
 | `JWT_ALGORITHM` | `HS256` (code constant) | JWT signing algorithm |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` (code constant) | Access-token lifetime in minutes |
+| `RATE_LIMIT_DEFAULT` | `60/minute` | Default per-IP limit for API endpoints |
+| `RATE_LIMIT_LOGIN` | `5/minute` | Per-IP limit for login attempts |
+| `RATE_LIMIT_ENABLED` | `true` | Enables or disables rate limiting |
 
 Generate a secret for local development:
 
@@ -224,6 +228,7 @@ flake8 src tests
 - Ticket creation and updates refresh their Qdrant vectors through an in-process background task. The full indexing command can repair the vector index if Qdrant was unavailable during a write.
 - The AI endpoint retrieves relevant tickets from Qdrant, reloads their authoritative data from SQLite, and gives only that context to the local Gemma model.
 - Matches below `RAG_MIN_RELEVANCE_SCORE` are rejected so unrelated tickets do not trigger an AI-generated answer.
+- SlowAPI applies an in-memory per-IP limit of 60 requests per minute by default, while `/auth/token` is restricted to 5 login attempts per minute. Exceeded limits return HTTP 429.
 
 ## AI usage disclosure
 

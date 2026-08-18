@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +12,8 @@ from tickethub.core.security import (
 )
 from tickethub.models.user import User
 from tickethub.schemas.auth import Token, UserCreate, UserPublic
+from tickethub.core.config import RATE_LIMIT_LOGIN
+from tickethub.core.rate_limit import limiter
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -57,7 +59,9 @@ async def register(
 
 
 @router.post("/token", response_model=Token)
+@limiter.limit(RATE_LIMIT_LOGIN)
 async def login(
+    request: Request,
     form: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ):

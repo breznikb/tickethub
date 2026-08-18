@@ -15,6 +15,7 @@ os.environ.setdefault(
 
 
 from tickethub.core.db import Base, get_db  # noqa: E402
+from tickethub.core.rate_limit import limiter  # noqa: E402
 from tickethub.main import app  # noqa: E402
 
 
@@ -23,6 +24,13 @@ def event_loop():
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    limiter.reset()
+    yield
+    limiter.reset()
 
 
 @pytest.fixture(autouse=True)

@@ -46,3 +46,18 @@ RAG_MIN_RELEVANCE_SCORE = float(
 JWT_SECRET_KEY = os.environ["JWT_SECRET_KEY"]
 JWT_ALGORITHM = "HS256"
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+RATE_LIMIT_DEFAULT = os.getenv(
+    "RATE_LIMIT_DEFAULT",
+    "60/minute",
+)
+
+RATE_LIMIT_LOGIN = os.getenv(
+    "RATE_LIMIT_LOGIN",
+    "5/minute",
+)
+
+RATE_LIMIT_ENABLED = os.getenv(
+    "RATE_LIMIT_ENABLED",
+    "true",
+).lower() in {"1", "true", "yes"}

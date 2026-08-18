@@ -10,3 +10,4 @@ qdrant-client[fastembed]==1.18.0
 PyJWT
 pwdlib[argon2]
 python-multipart
+slowapi==0.1.10
