@@ -206,6 +206,7 @@ flake8 src tests
 | GET | `/tickets/{id}` | Protected; ticket detail, including full original source JSON (cached in Redis for 30s) |
 | GET | `/tickets/search?q=` | Protected; search tickets by title |
 | GET | `/tickets/semantic-search?q=` | Protected; semantic similarity search with optional filters |
+| GET | `/stats` | Protected; aggregate ticket counts by status and priority |
 | POST | `/tickets` | Protected; create a new ticket |
 | PATCH | `/tickets/{id}` | Protected; update a ticket and invalidate its cache entry |
 | POST | `/ai/ask` | Protected; answer questions using relevant tickets and return supporting sources |
@@ -219,6 +220,7 @@ flake8 src tests
 - The list endpoint's `description` field is the ticket's `title` truncated to 100 characters, since DummyJSON's todos have no separate description field.
 - The sync is idempotent (upsert by id), so it's safe to re-run.
 - `GET /tickets/{id}` caches its response in Redis for 30 seconds; `PATCH /tickets/{id}` explicitly invalidates that cache entry so updates are reflected immediately instead of waiting for the TTL to expire.
+- `GET /stats` calculates ticket totals directly from SQLite and returns counts grouped by status and priority, including zero values for categories with no tickets.
 - Ticket creation and updates refresh their Qdrant vectors through an in-process background task. The full indexing command can repair the vector index if Qdrant was unavailable during a write.
 - The AI endpoint retrieves relevant tickets from Qdrant, reloads their authoritative data from SQLite, and gives only that context to the local Gemma model.
 - Matches below `RAG_MIN_RELEVANCE_SCORE` are rejected so unrelated tickets do not trigger an AI-generated answer.
