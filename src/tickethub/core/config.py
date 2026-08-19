@@ -7,6 +7,11 @@ DUMMYJSON_TIMEOUT_SECONDS = float(
     os.getenv("DUMMYJSON_TIMEOUT_SECONDS", "10")
 )
 
+SYNC_INTERVAL_SECONDS = float(
+    os.getenv("SYNC_INTERVAL_SECONDS", "300")
+)
+
+
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")

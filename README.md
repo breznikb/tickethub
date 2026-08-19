@@ -53,6 +53,8 @@ Most environment variables have local defaults. `JWT_SECRET_KEY` is required.
 |---|---|---|
 | `DATABASE_URL` | `sqlite+aiosqlite:///./tickethub.db` | Async SQLAlchemy database URL |
 | `DUMMYJSON_BASE_URL` | `https://dummyjson.com` | Base URL for the external DummyJSON source |
+| `DUMMYJSON_TIMEOUT_SECONDS` | `10` | Timeout for requests to the DummyJSON API |
+| `SYNC_INTERVAL_SECONDS` | `300` | How often the running API automatically re-syncs and re-indexes tickets from DummyJSON |
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL, used for caching ticket detail lookups |
 | `QDRANT_URL` | `http://localhost:6333` | Qdrant HTTP endpoint used for vector storage |
 | `EMBEDDING_MODEL` | `BAAI/bge-small-en-v1.5` | Local model used to create ticket and query embeddings |
@@ -112,6 +114,8 @@ Seed the database from DummyJSON:
 PYTHONPATH=src python3.11 -m tickethub.services.sync
 ```
 
+Note: once the API is running, it also periodically re-syncs and re-indexes tickets in the background (see `SYNC_INTERVAL_SECONDS`). The manual command above is useful for an initial seed before the API is started, or for a one-off sync outside the app's lifecycle.
+
 Start the API (the environment can alternatively be loaded with Uvicorn's `--env-file .env` option):
 
 ```bash
@@ -140,6 +144,10 @@ docker compose up --build
 This builds the image, starts Redis, Qdrant, Ollama, and the API, applies migrations, and serves the API on http://localhost:8000. The SQLite database persists in the `./data` directory, while named Docker volumes preserve vectors, embedding models, and the Ollama model.
 
 Docker Compose reads the project's `.env` file and passes `JWT_SECRET_KEY` to the API container.
+
+Each service (`api`, `redis`, `qdrant`, `ollama`) has a Docker healthcheck; `docker compose ps` shows `healthy`/`unhealthy` status once containers finish starting.
+
+If port 11434 is already in use on your machine, override the host-side Ollama port without editing `docker-compose.yml` by adding `OLLAMA_HOST_PORT=<port>` to `.env` (the container-internal port stays 11434, so other services still reach it at `ollama:11434`).
 
 Index stored tickets in Qdrant:
 
@@ -216,6 +224,8 @@ flake8 src tests
 | POST | `/tickets` | Protected; create a new ticket |
 | PATCH | `/tickets/{id}` | Protected; update a ticket and invalidate its cache entry |
 | POST | `/ai/ask` | Protected; answer questions using relevant tickets and return supporting sources |
+| GET | `/health/live` | Liveness check; always returns 200 if the process is running |
+| GET | `/health/ready` | Readiness check; returns 200 if the database and Redis are reachable (503 otherwise), and reports Qdrant status without affecting the overall result |
 
 ## Design notes
 
@@ -225,6 +235,8 @@ flake8 src tests
 - `priority` is derived from `id % 3` (0=low, 1=medium, 2=high) since DummyJSON's todos have no native priority field.
 - The list endpoint's `description` field is the ticket's `title` truncated to 100 characters, since DummyJSON's todos have no separate description field.
 - The sync is idempotent (upsert by id), so it's safe to re-run.
+- The API starts a background task on startup that re-runs the sync/index step every `SYNC_INTERVAL_SECONDS`. A failed run is logged and skipped rather than stopping future runs, and the task is cancelled cleanly on shutdown.
+- `/health/ready` treats the database and Redis as required dependencies (their failure returns 503) and Qdrant as optional/informational (its failure is reported in the response body but does not affect the status code), since semantic search degrading gracefully is preferable to the whole API being marked unready.
 - `GET /tickets/{id}` caches its response in Redis for 30 seconds; `PATCH /tickets/{id}` explicitly invalidates that cache entry so updates are reflected immediately instead of waiting for the TTL to expire.
 - `GET /stats` calculates ticket totals directly from SQLite and returns counts grouped by status and priority, including zero values for categories with no tickets.
 - Ticket creation and updates refresh their Qdrant vectors through an in-process background task. The full indexing command can repair the vector index if Qdrant was unavailable during a write.

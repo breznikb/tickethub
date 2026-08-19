@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 from contextlib import asynccontextmanager
 
@@ -11,6 +12,8 @@ from tickethub.api.ai import router as ai_router
 from tickethub.api.health import router as health_router
 from tickethub.api.tickets import router as tickets_router
 from tickethub.core.vector_db import qdrant_client
+from tickethub.core.config import SYNC_INTERVAL_SECONDS
+from tickethub.services.sync import run_periodic_sync
 from tickethub.api.auth import router as auth_router
 from tickethub.api.stats import router as stats_router
 from tickethub.core.rate_limit import limiter
@@ -25,9 +28,18 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("TicketHub application started")
 
+    sync_task = asyncio.create_task(run_periodic_sync(SYNC_INTERVAL_SECONDS))
+
     try:
         yield
     finally:
+        sync_task.cancel()
+
+        try:
+            await sync_task
+        except asyncio.CancelledError:
+            pass
+
         await qdrant_client.close()
         logger.info("TicketHub application stopped")
 

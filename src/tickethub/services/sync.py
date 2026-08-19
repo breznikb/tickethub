@@ -68,8 +68,16 @@ async def sync_and_index() -> tuple[int, int]:
             "Ticket synchronization failed"
         )
         raise
-    finally:
-        await qdrant_client.close()
+
+
+async def run_periodic_sync(interval_seconds: float) -> None:
+    while True:
+        try:
+            await sync_and_index()
+        except Exception:
+            pass
+
+        await asyncio.sleep(interval_seconds)
 
 
 def main() -> None:
@@ -79,6 +87,8 @@ def main() -> None:
         asyncio.run(sync_and_index())
     except Exception as exc:
         raise SystemExit(1) from exc
+    finally:
+        asyncio.run(qdrant_client.close())
 
 
 if __name__ == "__main__":

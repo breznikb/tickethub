@@ -1,5 +1,4 @@
 import logging
-from unittest.mock import AsyncMock
 
 import pytest
 
@@ -42,11 +41,6 @@ async def test_sync_failure_is_logged(
         sync,
         "sync_tickets",
         fail_sync,
-    )
-    monkeypatch.setattr(
-        sync.qdrant_client,
-        "close",
-        AsyncMock(),
     )
 
     with caplog.at_level(
