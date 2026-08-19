@@ -8,6 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from tickethub.api.ai import router as ai_router
+from tickethub.api.health import router as health_router
 from tickethub.api.tickets import router as tickets_router
 from tickethub.core.vector_db import qdrant_client
 from tickethub.api.auth import router as auth_router
@@ -44,6 +45,7 @@ app.include_router(auth_router)
 app.include_router(tickets_router)
 app.include_router(stats_router)
 app.include_router(ai_router)
+app.include_router(health_router)
 
 
 @app.get("/")
