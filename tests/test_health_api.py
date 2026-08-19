@@ -9,7 +9,34 @@ async def test_health_live(unauthenticated_client):
     assert response.json() == {"status": "ok"}
 
 
-async def test_health_ready_when_all_dependencies_ok(unauthenticated_client):
+async def test_health_ready_when_all_dependencies_ok(unauthenticated_client, monkeypatch):
+    class WorkingConnection:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def execute(self, *args, **kwargs):
+            return None
+
+    class WorkingEngine:
+        def connect(self):
+            return WorkingConnection()
+
+    async def working_ping():
+        return True
+
+    async def working_get_collections():
+        return None
+
+    monkeypatch.setattr("tickethub.api.health.engine", WorkingEngine())
+    monkeypatch.setattr("tickethub.api.health.redis_client.ping", working_ping)
+    monkeypatch.setattr(
+        "tickethub.api.health.qdrant_client.get_collections",
+        working_get_collections,
+     )
+
     response = await unauthenticated_client.get("/health/ready")
 
     assert response.status_code == 200
@@ -66,9 +93,28 @@ async def test_health_ready_when_database_is_down(unauthenticated_client, monkey
 
 
 async def test_health_ready_when_qdrant_is_down(unauthenticated_client, monkeypatch):
+    class WorkingConnection:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def execute(self, *args, **kwargs):
+            return None
+
+    class WorkingEngine:
+        def connect(self):
+            return WorkingConnection()
+
+    async def working_ping():
+        return True
+
     async def broken_get_collections():
         raise RuntimeError("connection refused")
 
+    monkeypatch.setattr("tickethub.api.health.engine", WorkingEngine())
+    monkeypatch.setattr("tickethub.api.health.redis_client.ping", working_ping)
     monkeypatch.setattr(
         "tickethub.api.health.qdrant_client.get_collections",
         broken_get_collections,
